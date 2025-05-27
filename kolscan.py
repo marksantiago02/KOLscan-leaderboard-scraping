@@ -1,4 +1,4 @@
-# from prisma import Prisma
+from prisma import Prisma
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -28,13 +28,10 @@ def setup_driver():
     return webdriver.Chrome(service=service, options=options)
 
 
-# Set up logging configuration at the top of your script
 def setup_logging():
-    # Create logs directory if it doesn't exist
     if not os.path.exists('logs'):
         os.makedirs('logs')
         
-    # Set up logging with timestamp in filename
     log_filename = f'logs/gmgn_scraper_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
     
     logging.basicConfig(
@@ -60,7 +57,6 @@ def click_time_filter(driver, period, logger):
     # Wait for page load
     time.sleep(3)
     
-    # Target buttons using exact class names from the HTML
     button_selectors = {
         'Daily': [
             "//div[contains(@class, 'timeFilterContainer')]//p[contains(@class, 'selected') or text()='Daily']",
@@ -86,23 +82,19 @@ def click_time_filter(driver, period, logger):
         try:
             logger.info(f"Trying selector: {selector}")
             
-            # Wait for element to be present and clickable
             button = WebDriverWait(driver, 15).until(
                 EC.element_to_be_clickable((By.XPATH, selector))
             )
             
-            # Scroll to element to ensure it's visible
             driver.execute_script("arguments[0].scrollIntoView(true);", button)
             time.sleep(1)
             
-            # Try regular click first
             try:
                 button.click()
                 logger.info(f"Successfully clicked {period} button with regular click")
                 time.sleep(3)
                 return
             except:
-                # If regular click fails, try JavaScript click
                 driver.execute_script("arguments[0].click();", button)
                 logger.info(f"Successfully clicked {period} button with JavaScript click")
                 time.sleep(3)
@@ -112,7 +104,6 @@ def click_time_filter(driver, period, logger):
             logger.warning(f"Selector {selector} failed: {str(e)}")
             continue
     
-    # If all selectors fail, log the page source for debugging
     logger.error(f"All selectors failed for {period}. Saving page source for debugging...")
     with open(f'debug_page_{period}.html', 'w', encoding='utf-8') as f:
         f.write(driver.page_source)
@@ -137,7 +128,6 @@ def extract_data(driver, period, logger):
     combined_push_content = combined_push_content.replace(',"telegram":""', ',"telegram":null').replace('""', '')
     combined_push_content = combined_push_content.rstrip(',')
 
-    # Convert combined_push_content to a Python list and create lookup dictionary
     try:
         combined_data = json.loads('[' + combined_push_content + ']')
         social_lookup = {
@@ -198,75 +188,41 @@ def extract_data(driver, period, logger):
     logger.info(f"Successfully extracted data for {len(data)} users")
     return data
 
-# async def save_to_database(data):
-#     db = Prisma()
-#     await db.connect()
+async def save_to_database(data):
+    db = Prisma()
+    await db.connect()
 
-#     for record in data:
-#         try:
-#             await db.kolleaderboard.upsert(
-#                 where={
-#                     'wallet_address': record['wallet_address']
-#                 },
-#                 data={
-#                     'create': {
-#                         'period': record['period'],
-#                         'wallet_name': record['wallet_name'],
-#                         'wallet_address': record['wallet_address'],
-#                         'pnl_usd': record['pnl_usd'],
-#                         'pnl_sol': record['pnl_sol'],
-#                         'telegram': record['telegram'],
-#                         'twitter': record['twitter']
-#                     },
-#                     'update': {
-#                         'period': record['period'],
-#                         'wallet_name': record['wallet_name'],
-#                         'pnl_usd': record['pnl_usd'],
-#                         'pnl_sol': record['pnl_sol'],
-#                         'telegram': record['telegram'],
-#                         'twitter': record['twitter']
-#                     }
-#                 }
-#             )
-#         except Exception as e:
-#             print(f"Error storing record for {record['wallet_address']}: {str(e)}")
+    for record in data:
+        try:
+            await db.kolleaderboard.upsert(
+                where={
+                    'wallet_address': record['wallet_address']
+                },
+                data={
+                    'create': {
+                        'period': record['period'],
+                        'wallet_name': record['wallet_name'],
+                        'wallet_address': record['wallet_address'],
+                        'pnl_usd': record['pnl_usd'],
+                        'pnl_sol': record['pnl_sol'],
+                        'telegram': record['telegram'],
+                        'twitter': record['twitter']
+                    },
+                    'update': {
+                        'period': record['period'],
+                        'wallet_name': record['wallet_name'],
+                        'pnl_usd': record['pnl_usd'],
+                        'pnl_sol': record['pnl_sol'],
+                        'telegram': record['telegram'],
+                        'twitter': record['twitter']
+                    }
+                }
+            )
+        except Exception as e:
+            print(f"Error storing record for {record['wallet_address']}: {str(e)}")
 
-#     await db.disconnect()
-#     print(f"Saved {len(data)} records to database")
-
-
-# async def scrape_kolscan():
-#     logger = setup_logging()
-#     logger.info("Initializing scraper")
-    
-#     driver = setup_driver()
-#     logger.info("Browser driver setup complete")
-    
-#     all_data = []  # Initialize list to store data from all periods
-    
-#     try:
-#         logger.info("Navigating to KOLscan leaderboard")
-#         driver.get("https://kolscan.io/leaderboard")
-#         logger.info("Page loaded, waiting for initial render")
-#         time.sleep(2)
-
-#         for period in ['Daily', 'Weekly', 'Monthly']:
-#             try:
-#                 logger.info(f"=== Starting {period} period scraping ===")
-#                 click_time_filter(driver, period, logger)
-#                 period_data = extract_data(driver, period, logger)
-#                 all_data.extend(period_data)  # Add period data to all_data
-#             except Exception as e:
-#                 logger.error(f"Failed to complete {period} scraping: {str(e)}", exc_info=True)
-
-#         await save_to_database(all_data)  # Save combined data from all periods
-    
-#     except Exception as e:
-#         logger.error(f"Critical scraper error: {str(e)}", exc_info=True)
-    
-#     finally:
-#         driver.quit()
-#         logger.info("Scraping process completed, browser closed")
+    await db.disconnect()
+    print(f"Saved {len(data)} records to database")
 
 
 def save_to_csv(data):
@@ -282,17 +238,15 @@ def scrape_kolscan():
     driver = setup_driver()
     logger.info("Browser driver setup complete")
     
-    all_data = []  # Initialize list to store data from all periods
+    all_data = []
     
     try:
         logger.info("Navigating to KOLscan leaderboard")
         driver.get("https://kolscan.io/leaderboard")
         logger.info("Page loaded, waiting for initial render")
         
-        # Wait longer for page to fully load
         time.sleep(5)
         
-        # Wait for the leaderboard container to be present
         try:
             WebDriverWait(driver, 20).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "div[class*='leaderboard']"))
@@ -300,7 +254,6 @@ def scrape_kolscan():
             logger.info("Leaderboard container found")
         except Exception as e:
             logger.warning(f"Could not find leaderboard container: {str(e)}")
-            # Save page source for debugging
             with open('debug_initial_page.html', 'w', encoding='utf-8') as f:
                 f.write(driver.page_source)
 
@@ -308,7 +261,6 @@ def scrape_kolscan():
             try:
                 logger.info(f"=== Starting {period} period scraping ===")
                 
-                # For Daily, it might already be selected, so we can skip clicking
                 if period != 'Daily':
                     click_time_filter(driver, period, logger)
                 else:
@@ -316,15 +268,15 @@ def scrape_kolscan():
                     time.sleep(2)
                 
                 period_data = extract_data(driver, period, logger)
-                all_data.extend(period_data)  # Add period data to all_data
+                all_data.extend(period_data)
                 
             except Exception as e:
                 logger.error(f"Failed to complete {period} scraping: {str(e)}", exc_info=True)
-                # Continue with next period instead of stopping
                 continue
 
         if all_data:
-            save_to_csv(all_data)  # Save combined data from all periods to CSV
+            save_to_csv(all_data)
+            # await save_to_database(all_data) :::: Add async before function definition
         else:
             logger.warning("No data was extracted from any period")
     
