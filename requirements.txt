@@ -1,0 +1,6 @@
+bs4
+pandas
+prisma
+selenium
+webdriver_manager
+python-dotenv
