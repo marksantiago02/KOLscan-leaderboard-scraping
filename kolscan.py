@@ -54,8 +54,7 @@ def wait_for_element(driver, selector, by=By.CSS_SELECTOR, timeout=10):
 def click_time_filter(driver, period, logger):
     logger.info(f"Attempting to click {period} filter button")
     
-    # Wait for page load
-    time.sleep(3)
+    time.sleep(5)
     
     button_selectors = {
         'Daily': [
@@ -132,7 +131,7 @@ def extract_data(driver, period, logger):
         combined_data = json.loads('[' + combined_push_content + ']')
         social_lookup = {
             item['wallet_address']: (item.get('telegram'), item.get('twitter'))
-            for item in combined_data[0]  # Access the first element since combined_data is a list
+            for item in combined_data[0]
         }
 
     except (json.JSONDecodeError, KeyError, IndexError) as e:
