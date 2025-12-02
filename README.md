@@ -32,7 +32,7 @@ For each trader on the leaderboard, the scraper collects:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/marksantiago02/KOLscan-leaderboard-scraping.git
+git clone https://github.com/marksantiago290/KOLscan-leaderboard-scraping.git
 cd KOLscan-clone
 ```
 
